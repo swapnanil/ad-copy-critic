@@ -1,0 +1,14 @@
+{
+  "headline": "Project Management Software",
+  "body": "Manage your projects better with our software. Teams love it.",
+  "cta": "Get Started",
+  "platform": "google_search",
+  "target_audience": "Operations managers and project leads at SMBs (10-200 employees)",
+  "campaign_goal": "conversion",
+  "product_category": "SaaS / project management",
+  "usp": "AI-powered task prioritisation that cuts meeting time by 40%",
+  "character_limits": {
+    "headline": 30,
+    "body": 90
+  }
+}

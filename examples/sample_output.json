@@ -1,0 +1,99 @@
+{
+  "overall_score": 72,
+  "overall_verdict": "strong",
+  "executive_summary": "This Facebook ad for a D2C sunscreen brand leads with a strong pattern interrupt that challenges category convention. The headline is specific, benefit-driven, and emotionally resonant. The body copy stacks credible proof points without feeling like a feature list. The CTA pairs action with an incentive. Minor improvements to headline specificity and body brevity could push this into exceptional territory.",
+  "dimensions": [
+    {
+      "dimension": "Clarity",
+      "score": 8,
+      "verdict": "The headline immediately communicates what makes this product different and why it matters.",
+      "issue": null,
+      "fix": null
+    },
+    {
+      "dimension": "Audience Fit",
+      "score": 8,
+      "verdict": "Directly addresses the core objection skincare-aware women have about sunscreen: texture and finish.",
+      "issue": null,
+      "fix": null
+    },
+    {
+      "dimension": "CTA Strength",
+      "score": 7,
+      "verdict": "'Shop Now — Free Shipping Over $40' pairs urgency with a transactional incentive.",
+      "issue": "The $40 threshold may deter low-AOV browsers from clicking.",
+      "fix": "Test 'Shop Now — Free Shipping on First Order' to remove the spend barrier for new customers."
+    },
+    {
+      "dimension": "Value Proposition",
+      "score": 8,
+      "verdict": "Three distinct proof points (invisible, SPF 50, reef-safe) that each address a real purchase barrier.",
+      "issue": null,
+      "fix": null
+    },
+    {
+      "dimension": "Emotional Hook",
+      "score": 9,
+      "verdict": "'Finally' in the headline signals relief and positions the brand as the solution to a longstanding frustration.",
+      "issue": null,
+      "fix": null
+    },
+    {
+      "dimension": "Platform Fit",
+      "score": 7,
+      "verdict": "Good Facebook format: hooks in line 1, body is scannable, CTA is explicit.",
+      "issue": "Body copy is 3 sentences — Facebook's algorithm favours 1-2 lines before the 'See More' cut.",
+      "fix": "Lead with the strongest proof point: 'Ultra-light SPF 50. No white cast. Reef-safe.' Let curiosity drive the click."
+    },
+    {
+      "dimension": "Credibility",
+      "score": 7,
+      "verdict": "'Dermatologist tested' adds third-party validation without overpromising.",
+      "issue": null,
+      "fix": null
+    },
+    {
+      "dimension": "Brevity",
+      "score": 6,
+      "verdict": "Body copy is slightly over-packed; trimming to 2 lines would improve thumb-stop rate.",
+      "issue": "Three-sentence body risks getting truncated before key proof points.",
+      "fix": "Reorder: lead with invisible finish (emotional), then reef-safe + SPF 50 (rational). Cut 'Dermatologist tested' to the landing page."
+    }
+  ],
+  "critical_issues": [],
+  "minor_issues": [
+    "Body copy may be truncated on mobile Facebook feeds before 'reef-safe' proof point.",
+    "Free shipping threshold ($40) could reduce CTR for new customers unfamiliar with AOV."
+  ],
+  "strengths": [
+    "'Finally' as an opener directly validates audience frustration — strong emotional hook.",
+    "Headline challenges category norms without making an unverifiable claim.",
+    "Three proof points address distinct purchase barriers (texture, efficacy, ethics).",
+    "CTA pairs action with a transactional incentive — clear next step."
+  ],
+  "variants": [
+    {
+      "label": "Variant A — Punchier Body",
+      "headline": "Finally, Sunscreen That Doesn't Feel Like Sunscreen",
+      "body": "Ultra-light SPF 50. No white cast. Reef-safe. Disappears in seconds — you'll forget you're wearing it.",
+      "cta": "Shop Now — Free Shipping Over $40",
+      "rationale": "Switches body to punchy fragments that survive Facebook's 'See More' truncation while preserving all three proof points."
+    },
+    {
+      "label": "Variant B — Lower Barrier CTA",
+      "headline": "Finally, Sunscreen That Doesn't Feel Like Sunscreen",
+      "body": "Ultra-light SPF 50 that disappears into skin in seconds. No white cast, no greasy finish. Dermatologist tested, reef-safe, 100% invisible protection.",
+      "cta": "Try It Free — Free Shipping on First Order",
+      "rationale": "Removes the $40 spend threshold to reduce friction for first-time buyers. Tests whether acquisition improves when CTA feels like a trial rather than a purchase."
+    },
+    {
+      "label": "Variant C — Social Proof Lead",
+      "headline": "47,000 Women Finally Found a Sunscreen They'll Actually Wear",
+      "body": "Ultra-light SPF 50. No white cast. No greasy finish. Reef-safe. Dermatologist tested.",
+      "cta": "Join Them — Shop Now",
+      "rationale": "Replaces the category challenge with social proof. The specific number (47K) adds credibility; 'finally' and 'actually wear' preserve the emotional framing. Tests whether peer validation outperforms direct benefit messaging."
+    }
+  ],
+  "ab_test_recommendation": "Run Variant A (punchier body) against control for 7 days targeting cold audiences, optimising for Add to Cart. If CTR lifts >15%, test Variant C (social proof headline) against Variant A to determine whether emotional benefit or social proof drives stronger top-of-funnel performance. Reserve Variant B (CTA test) for retargeting audiences where purchase intent is already established.",
+  "platform_fit_note": "Facebook feed placement is well-chosen for this product — high visual category, impulse-adjacent purchase, and the audience targeting parameters (women 25-40, skincare interest) are strong. Consider duplicating the winning creative to Instagram Stories with a vertical crop and 'Swipe Up' CTA for extended reach at minimal incremental cost."
+}
