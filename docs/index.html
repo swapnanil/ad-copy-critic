@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ad Copy Critic — llm-tools by Swapnanil Saha</title>
+  <meta name="description" content="Eight dimensions. One score. Rewrites included. Stop guessing whether your ad copy works.">
+  <meta property="og:title" content="Ad Copy Critic">
+  <meta property="og:description" content="Eight dimensions. One score. Rewrites included. Stop guessing whether your ad copy works.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #080a0e; --bg2: #0d1017; --surface: #111520;
+      --border: #1e2535; --border2: #252d40;
+      --gold: #c9a84c; --gold-dim: #8a6f2e;
+      --cyan: #00c9b1; --cyan-dim: #007a6b; --red: #e05252;
+      --text: #dde2ee; --text-dim: #7a8399; --text-muted: #3d4560;
+      --mono: 'JetBrains Mono', monospace;
+      --display: 'Bebas Neue', sans-serif;
+      --serif: 'Crimson Pro', serif;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--serif);
+      font-size: 18px;
+      line-height: 1.6;
+      overflow-x: hidden;
+      cursor: crosshair;
+    }
+
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none; z-index: 999; opacity: 0.4;
+    }
+
+    body::after {
+      content: '';
+      position: fixed; inset: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+      pointer-events: none; z-index: 998;
+    }
+
+    .cursor-glow {
+      position: fixed; width: 280px; height: 280px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(201,168,76,0.05) 0%, transparent 70%);
+      pointer-events: none; z-index: 997; transform: translate(-50%, -50%);
+    }
+
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 18px 48px;
+      background: rgba(8,10,14,0.88);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-logo { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: 3px; text-decoration: none; }
+    .nav-logo span { color: var(--text-muted); font-weight: 300; }
+    .nav-links { display: flex; gap: 32px; }
+    .nav-links a { font-family: var(--mono); font-size: 11px; color: var(--text-dim); text-decoration: none; letter-spacing: 2px; text-transform: uppercase; transition: color 0.2s; }
+    .nav-links a:hover { color: var(--gold); }
+
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 48px; }
+
+    section { padding: 100px 0; }
+
+    .section-tag {
+      font-family: var(--mono); font-size: 10px; letter-spacing: 4px;
+      text-transform: uppercase; color: var(--cyan);
+      display: flex; align-items: center; gap: 12px; margin-bottom: 14px;
+    }
+    .section-tag::before { content: ''; width: 22px; height: 1px; background: var(--cyan); display: block; }
+
+    .section-header { margin-bottom: 56px; }
+    .section-title { font-family: var(--display); font-size: clamp(38px, 5vw, 54px); letter-spacing: 1px; color: var(--text); line-height: 1; }
+    .section-sub { font-family: var(--serif); font-size: 17px; color: var(--text-dim); margin-top: 14px; font-style: italic; max-width: 520px; }
+
+    .hero { min-height: 100vh; display: flex; align-items: center; padding-top: 74px; }
+
+    .hero-inner {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 72px; align-items: center; width: 100%;
+    }
+
+    .tool-badge {
+      font-family: var(--mono); font-size: 10px; letter-spacing: 4px; text-transform: uppercase;
+      color: var(--cyan); margin-bottom: 28px; display: flex; align-items: center; gap: 12px;
+    }
+    .tool-badge::before { content: ''; width: 22px; height: 1px; background: var(--cyan); display: block; }
+
+    .hero-title { font-family: var(--display); font-size: clamp(64px, 9vw, 120px); line-height: 0.92; letter-spacing: 1px; color: var(--text); margin-bottom: 28px; }
+    .hero-title .accent { color: var(--gold); }
+
+    .hero-desc { font-family: var(--serif); font-size: 21px; font-style: italic; font-weight: 300; color: var(--text-dim); max-width: 480px; line-height: 1.55; margin-bottom: 36px; }
+
+    .btn-group { display: flex; gap: 14px; flex-wrap: wrap; }
+
+    .btn-primary {
+      font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+      color: var(--bg); background: var(--gold); padding: 13px 26px; text-decoration: none;
+      border: 1px solid var(--gold); transition: all 0.2s; display: inline-block; cursor: crosshair;
+    }
+    .btn-primary:hover { background: transparent; color: var(--gold); }
+
+    .btn-secondary {
+      font-family: var(--mono); font-size: 11px; font-weight: 400; letter-spacing: 2px; text-transform: uppercase;
+      color: var(--text-dim); text-decoration: none; border: 1px solid var(--border2);
+      padding: 13px 26px; transition: all 0.2s; display: inline-block; cursor: crosshair;
+    }
+    .btn-secondary:hover { border-color: var(--text-dim); color: var(--text); }
+
+    .terminal { background: #0d1117; border: 1px solid #21262d; font-family: var(--mono); font-size: 12.5px; padding: 20px 24px; overflow-x: auto; }
+    .terminal-bar { display: flex; gap: 6px; margin-bottom: 18px; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .dot-r { background: #ff5f56; } .dot-y { background: #ffbd2e; } .dot-g { background: #27c93f; }
+    .terminal pre { color: var(--text-dim); line-height: 1.75; white-space: pre; }
+    .t-prompt { color: var(--cyan-dim); }
+    .t-cmd    { color: var(--text); }
+    .t-flag   { color: var(--gold); }
+    .t-val    { color: #79c0ff; }
+    .t-cmt    { color: var(--text-muted); }
+    .t-key    { color: var(--gold); }
+    .t-str    { color: #a8d8a8; }
+    .t-sev    { color: var(--red); }
+    .t-head   { color: var(--cyan); }
+    .t-dim    { color: var(--text-dim); }
+    .t-muted  { color: var(--text-muted); }
+    .t-num    { color: #79c0ff; }
+
+    .full-divider { border: none; border-top: 1px solid var(--border); margin: 0; }
+
+    .problem-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: start; }
+    .problem-left .section-tag { margin-bottom: 28px; }
+    .problem-statement { font-family: var(--serif); font-size: 19px; font-style: italic; color: var(--text-dim); line-height: 1.75; font-weight: 300; }
+    .problem-solution { font-family: var(--serif); font-size: 17px; color: var(--text-dim); line-height: 1.75; font-weight: 300; margin-top: 48px; }
+
+    .arch-row { display: grid; grid-template-columns: repeat(4, 1fr); position: relative; gap: 0; }
+    .arch-row::before {
+      content: ''; position: absolute; top: 7px;
+      left: calc(12.5% + 8px); right: calc(12.5% + 8px);
+      height: 1px; background: linear-gradient(90deg, transparent, var(--border2) 10%, var(--border2) 90%, transparent);
+    }
+    .arch-step { padding: 0 20px 0 0; }
+    .arch-num { font-family: var(--mono); font-size: 10px; letter-spacing: 3px; color: var(--text-muted); margin-bottom: 22px; display: flex; align-items: center; gap: 10px; }
+    .arch-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); flex-shrink: 0; }
+    .arch-label { font-family: var(--display); font-size: 22px; color: var(--text); margin-bottom: 10px; letter-spacing: 1px; }
+    .arch-desc { font-family: var(--serif); font-size: 15px; color: var(--text-dim); line-height: 1.55; }
+
+    .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--border); }
+    .feat-card { background: var(--surface); padding: 28px 26px; transition: border-top 0.2s; border-top: 2px solid transparent; }
+    .feat-card:hover { border-top-color: var(--gold); }
+    .feat-title { font-family: var(--serif); font-size: 17px; font-weight: 600; color: var(--text); margin-bottom: 10px; }
+    .feat-desc { font-family: var(--serif); font-size: 15px; font-weight: 300; color: var(--text-dim); line-height: 1.6; }
+
+    pre {
+      background: #0d1117; border: 1px solid #21262d; border-radius: 6px;
+      padding: 20px 24px; font-family: var(--mono); font-size: 12.5px;
+      line-height: 1.7; overflow-x: auto; color: #c9d1d9;
+    }
+    pre .kw { color: #ff7b72; } pre .fn { color: #d2a8ff; }
+    pre .str { color: #a5d6ff; } pre .cmt { color: #8b949e; font-style: italic; }
+
+    .qs-label { font-family: var(--mono); font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 12px; }
+    .qs-gap { margin-top: 28px; }
+
+    .example-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    .ex-label { font-family: var(--mono); font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+    .ex-label span { color: var(--cyan); }
+
+    .suite-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px; background: var(--border); }
+    .suite-card { background: var(--surface); padding: 24px 20px; text-decoration: none; transition: background 0.2s; display: block; }
+    .suite-card:hover { background: var(--bg2); }
+    .suite-name { font-family: var(--mono); font-size: 11px; color: var(--gold); margin-bottom: 10px; letter-spacing: 0.5px; }
+    .suite-desc { font-family: var(--serif); font-size: 13.5px; color: var(--text-dim); line-height: 1.45; }
+
+    footer { border-top: 1px solid var(--border); padding: 26px 48px; display: flex; justify-content: space-between; align-items: center; }
+    .footer-left { font-family: var(--mono); font-size: 10px; letter-spacing: 2px; color: var(--text-muted); }
+    .footer-right { font-family: var(--mono); font-size: 10px; color: var(--text-muted); }
+    .footer-right span { color: var(--gold); }
+
+    .reveal { opacity: 0; transform: translateY(28px); transition: opacity 0.65s ease, transform 0.65s ease; }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+
+    @media (max-width: 768px) {
+      nav { padding: 16px 24px; }
+      .nav-links { display: none; }
+      .container { padding: 0 24px; }
+      section { padding: 64px 0; }
+      .hero { min-height: auto; padding: 100px 0 48px; }
+      .hero-inner { grid-template-columns: 1fr; gap: 44px; }
+      .hero-title { font-size: 52px; }
+      .hero-desc { font-size: 18px; }
+      .problem-grid { grid-template-columns: 1fr; gap: 32px; }
+      .problem-solution { margin-top: 0; }
+      .arch-row { grid-template-columns: 1fr 1fr; gap: 40px; }
+      .arch-row::before { display: none; }
+      .features-grid { grid-template-columns: 1fr; }
+      .example-grid { grid-template-columns: 1fr; }
+      .suite-grid { grid-template-columns: 1fr 1fr; }
+      footer { flex-direction: column; gap: 10px; text-align: center; padding: 20px 24px; }
+    }
+
+    @media (max-width: 480px) {
+      .arch-row { grid-template-columns: 1fr; }
+      .suite-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="cursor-glow" id="cursorGlow"></div>
+
+  <nav>
+    <a href="#" class="nav-logo">SS<span> / tools</span></a>
+    <div class="nav-links">
+      <a href="https://swapnanilsaha.com" target="_blank">Portfolio</a>
+      <a href="https://github.com/swapnanil" target="_blank">GitHub</a>
+    </div>
+  </nav>
+
+  <!-- ═══════════════════════════════════ HERO ═══ -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero-inner">
+        <div class="hero-left">
+          <div class="tool-badge">Ad Tech · Creative AI</div>
+          <h1 class="hero-title">Ad Copy<br><span class="accent">Critic</span></h1>
+          <p class="hero-desc">"Eight dimensions. One score. Rewrites included. Stop guessing whether your ad copy works."</p>
+          <div class="btn-group">
+            <a href="https://github.com/swapnanil/ad-copy-critic" target="_blank" class="btn-primary">View on GitHub</a>
+            <a href="https://github.com/swapnanil/ad-copy-critic#api-usage" target="_blank" class="btn-secondary">Read the Docs</a>
+          </div>
+        </div>
+
+        <div class="hero-right">
+          <div class="terminal">
+            <div class="terminal-bar">
+              <div class="dot dot-r"></div>
+              <div class="dot dot-y"></div>
+              <div class="dot dot-g"></div>
+            </div>
+            <pre><span class="t-prompt">$</span> <span class="t-cmd">docker-compose run cli critique</span> \
+  <span class="t-flag">--file</span> <span class="t-val">examples/sample_fintech_ad.json</span> \
+  <span class="t-flag">--format</span> <span class="t-val">markdown</span>
+
+<span class="t-cmt"># Validating character limits… ok</span>
+<span class="t-cmt"># Scoring 8 dimensions…</span>
+
+<span class="t-head">## Ad Copy Critique Report</span>
+<span class="t-dim">Platform: LinkedIn · Audience: CFOs (B2B)</span>
+<span class="t-dim">Overall score: </span><span class="t-sev">28 / 100</span><span class="t-dim"> — needs_work</span>
+
+<span class="t-head">CTA</span>  <span class="t-dim">score: </span><span class="t-sev">3</span>
+<span class="t-dim">Issue: 'Learn More' signals passive intent</span>
+<span class="t-dim">Fix:   Replace with 'See How Much You're</span>
+<span class="t-dim">       Overspending'</span>
+
+<span class="t-head">Rewrite variant 1</span>
+<span class="t-str">"Cut Finance Team Reporting Time by 47%"</span></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="full-divider">
+
+  <!-- ═══════════════════════════════════ PROBLEM ═══ -->
+  <section>
+    <div class="container">
+      <div class="problem-grid reveal">
+        <div class="problem-left">
+          <div class="section-tag">Problem</div>
+          <p class="problem-statement">Copywriters spend hours revising headlines that feel wrong but nobody can articulate why. Marketing managers approve ads they're unsure about because there's no objective rubric. The result: wasted spend on ads that fail for entirely fixable reasons — bad CTAs, wrong tone, audience mismatch.</p>
+        </div>
+        <div class="problem-right">
+          <p class="problem-solution">Ad Copy Critic gives every ad a structured critique using eight weighted dimensions — each scored with evidence and a specific fix. The same calibrated feedback a senior creative director would give, available on demand, for every ad in your library. Includes 2–3 rewrite variants with rationale for every change made.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="full-divider">
+
+  <!-- ═══════════════════════════════ ARCHITECTURE ═══ -->
+  <section>
+    <div class="container">
+      <div class="section-header reveal">
+        <div class="section-tag">Architecture</div>
+        <h2 class="section-title">From copy to<br>actionable score.</h2>
+        <p class="section-sub">Pre-validation before the LLM call. Evidence-backed scoring. Rewrites every time.</p>
+      </div>
+      <div class="arch-row">
+        <div class="arch-step reveal">
+          <div class="arch-num"><div class="arch-dot"></div>01</div>
+          <div class="arch-label">Input</div>
+          <div class="arch-desc">Ad copy, platform type, target audience, campaign goal — structured JSON or interactive CLI</div>
+        </div>
+        <div class="arch-step reveal">
+          <div class="arch-num"><div class="arch-dot"></div>02</div>
+          <div class="arch-label">Validate</div>
+          <div class="arch-desc">Pre-LLM character limit check against platform rules — catches formatting failures before scoring</div>
+        </div>
+        <div class="arch-step reveal">
+          <div class="arch-num"><div class="arch-dot"></div>03</div>
+          <div class="arch-label">Score</div>
+          <div class="arch-desc">Claude scores all 8 dimensions with evidence quotes and specific fixes, weighted by business impact</div>
+        </div>
+        <div class="arch-step reveal">
+          <div class="arch-num"><div class="arch-dot"></div>04</div>
+          <div class="arch-label">Output</div>
+          <div class="arch-desc">Composite 1–100 score, per-dimension breakdown, and 2–3 rewrite variants with change rationale</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="full-divider">
+
+  <!-- ════════════════════════════════ FEATURES ═══ -->
+  <section>
+    <div class="container">
+      <div class="section-header reveal">
+        <div class="section-tag">Features</div>
+        <h2 class="section-title">Calibrated.<br>Not generic.</h2>
+        <p class="section-sub">Every capability was designed around the gap between "this ad feels off" and knowing exactly what to fix.</p>
+      </div>
+      <div class="features-grid">
+        <div class="feat-card reveal">
+          <div class="feat-title">8-Dimension Scoring</div>
+          <div class="feat-desc">Weighted composite score from 1–100 across headline strength, CTA clarity, emotional resonance, specificity, audience fit, urgency, brand alignment, and readability. Per-dimension scores included.</div>
+        </div>
+        <div class="feat-card reveal">
+          <div class="feat-title">Platform Intelligence</div>
+          <div class="feat-desc">Different rules for Google Search, LinkedIn, Facebook, and Native. Character limits, tone calibration, and CTA expectations differ per platform — the critique adapts accordingly.</div>
+        </div>
+        <div class="feat-card reveal">
+          <div class="feat-title">Rewrite Variants</div>
+          <div class="feat-desc">Every critique includes 2–3 improved versions of the ad with rationale for each change. Not a vague suggestion — a ready-to-use alternative with an explanation of what changed and why.</div>
+        </div>
+        <div class="feat-card reveal">
+          <div class="feat-title">Batch Mode</div>
+          <div class="feat-desc">Critique an entire folder of ads in one run. Useful for pre-launch audits, A/B candidate reviews, and quarterly creative library hygiene.</div>
+        </div>
+        <div class="feat-card reveal">
+          <div class="feat-title">Root Cause Analysis</div>
+          <div class="feat-desc">Explains why a metric underperforms and what the business impact is — not just that the CTA is weak, but what audience behaviour it misses and what revenue signal that creates.</div>
+        </div>
+        <div class="feat-card reveal">
+          <div class="feat-title">HTML Scorecard</div>
+          <div class="feat-desc">Formatted HTML export with colour-coded dimension scores. Designed to be shared with creative and marketing stakeholders without any technical context required.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="full-divider">
+
+  <!-- ══════════════════════════════ QUICKSTART ═══ -->
+  <section>
+    <div class="container">
+      <div class="section-header reveal">
+        <div class="section-tag">Quickstart</div>
+        <h2 class="section-title">Running in<br>three minutes.</h2>
+      </div>
+      <div class="reveal">
+        <div class="qs-label">Setup</div>
+        <pre><span class="kw">git</span> clone https://github.com/swapnanil/ad-copy-critic
+<span class="kw">cd</span> ad-copy-critic
+<span class="kw">cp</span> .env.example .env   <span class="cmt"># add your ANTHROPIC_API_KEY</span>
+docker-compose up api</pre>
+      </div>
+      <div class="qs-gap reveal">
+        <div class="qs-label">CLI — critique a single ad</div>
+        <pre>docker-compose run cli critique \
+  --file examples/sample_fintech_ad.json \
+  --format markdown</pre>
+      </div>
+      <div class="qs-gap reveal">
+        <div class="qs-label">CLI — batch critique a folder</div>
+        <pre>docker-compose run cli batch \
+  --dir examples/ads/ \
+  --platform linkedin \
+  --format html --output reports/</pre>
+      </div>
+    </div>
+  </section>
+
+  <hr class="full-divider">
+
+  <!-- ══════════════════════════════════ EXAMPLE ═══ -->
+  <section>
+    <div class="container">
+      <div class="section-header reveal">
+        <div class="section-tag">Example</div>
+        <h2 class="section-title">Vague copy in.<br>Exact fixes out.</h2>
+      </div>
+      <div class="example-grid">
+        <div class="reveal">
+          <div class="ex-label">Input — <span>LinkedIn ad JSON</span></div>
+          <div class="terminal">
+            <pre style="font-size: 12px; line-height: 1.75; white-space: pre-wrap;"><span class="t-muted">{</span>
+  <span class="t-key">"headline"</span><span class="t-muted">:</span>
+    <span class="t-str">"Manage Your Business
+     Expenses Better"</span><span class="t-muted">,</span>
+  <span class="t-key">"cta"</span><span class="t-muted">:</span> <span class="t-str">"Learn More"</span><span class="t-muted">,</span>
+  <span class="t-key">"platform"</span><span class="t-muted">:</span> <span class="t-str">"linkedin"</span><span class="t-muted">,</span>
+  <span class="t-key">"target_audience"</span><span class="t-muted">:</span>
+    <span class="t-str">"CFOs at mid-size B2B"</span><span class="t-muted">,</span>
+  <span class="t-key">"campaign_goal"</span><span class="t-muted">:</span>
+    <span class="t-str">"lead_generation"</span>
+<span class="t-muted">}</span></pre>
+          </div>
+        </div>
+        <div class="reveal">
+          <div class="ex-label">Output — <span>critique excerpt</span></div>
+          <div class="terminal">
+            <pre style="font-size: 11.5px; line-height: 1.7;"><span class="t-key">overall_score</span><span class="t-muted">:</span> <span class="t-sev">28</span>
+<span class="t-key">verdict</span><span class="t-muted">:</span>        <span class="t-sev">needs_work</span>
+
+<span class="t-head">CTA dimension</span>
+<span class="t-key">score</span><span class="t-muted">:</span>  <span class="t-sev">3 / 10</span>
+<span class="t-key">issue</span><span class="t-muted">:</span>  <span class="t-str">"'Learn More' signals passive
+         intent — wrong for CFO
+         lead-gen"</span>
+<span class="t-key">fix</span><span class="t-muted">:</span>    <span class="t-str">"Replace with 'See How Much
+         You're Overspending'"</span>
+
+<span class="t-head">Rewrite variant 1</span>
+<span class="t-str">"Cut Finance Team Reporting
+ Time by 47%"</span>
+<span class="t-muted">specificity + urgency added</span></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="full-divider">
+
+  <!-- ══════════════════════════════════ SUITE ═══ -->
+  <section>
+    <div class="container">
+      <div class="section-header reveal">
+        <div class="section-tag">Suite</div>
+        <h2 class="section-title">Five more tools.<br>Same standard.</h2>
+        <p class="section-sub">Each tool is a standalone CLI + REST API solving a real enterprise problem with Claude.</p>
+      </div>
+      <div class="suite-grid">
+        <a href="https://swapnanil.github.io/campaign-health/" target="_blank" class="suite-card reveal">
+          <div class="suite-name">campaign-health</div>
+          <div class="suite-desc">Diagnoses ad campaign metrics with root causes and prioritised actions</div>
+        </a>
+        <a href="https://swapnanil.github.io/rag-readiness/" target="_blank" class="suite-card reveal">
+          <div class="suite-name">rag-readiness</div>
+          <div class="suite-desc">Recommends a complete RAG architecture for your data and use case</div>
+        </a>
+        <a href="https://swapnanil.github.io/llm-eval-suite/" target="_blank" class="suite-card reveal">
+          <div class="suite-name">llm-eval-suite</div>
+          <div class="suite-desc">Evaluates and compares LLM outputs with structured, evidence-based scoring</div>
+        </a>
+        <a href="https://swapnanil.github.io/ai-use-case-scoper/" target="_blank" class="suite-card reveal">
+          <div class="suite-name">ai-use-case-scoper</div>
+          <div class="suite-desc">Turns a vague AI ambition into a prioritised roadmap with a 90-day plan</div>
+        </a>
+        <a href="https://swapnanil.github.io/meeting-to-action/" target="_blank" class="suite-card reveal">
+          <div class="suite-name">meeting-to-action</div>
+          <div class="suite-desc">Extracts decisions, owners, and deadlines from any meeting transcript</div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="footer-left">© 2026 Swapnanil Saha · swapnanilsaha.com</div>
+    <div class="footer-right">Part of the <span>llm-tools</span> suite</div>
+  </footer>
+
+  <script>
+    const glow = document.getElementById('cursorGlow');
+    document.addEventListener('mousemove', e => {
+      glow.style.left = e.clientX + 'px';
+      glow.style.top = e.clientY + 'px';
+    });
+
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach((en, i) => {
+        if (en.isIntersecting) {
+          setTimeout(() => en.target.classList.add('visible'), i * 75);
+          obs.unobserve(en.target);
+        }
+      });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+  </script>
+</body>
+</html>
