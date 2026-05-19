@@ -6,8 +6,29 @@ import time
 
 import anthropic
 
-from .models import AdCopyInput, AdCritique, BatchCritique
-from .prompts import SCHEMA_CORRECTION_PROMPT, SYSTEM_PROMPT, build_user_prompt
+from .models import (
+    AdCopyInput,
+    AdCritique,
+    BatchCritique,
+    BrandVoiceProfile,
+    BrandVoiceResult,
+    CompetitorAd,
+    CompetitorAnalysis,
+    LocalisationResult,
+    TrendBenchmark,
+    VoiceViolation,
+)
+from .prompts import (
+    BRAND_VOICE_SYSTEM_PROMPT,
+    COMPETITOR_SYSTEM_PROMPT,
+    LOCALISATION_SYSTEM_PROMPT,
+    SCHEMA_CORRECTION_PROMPT,
+    SYSTEM_PROMPT,
+    build_brand_voice_prompt,
+    build_competitor_prompt,
+    build_localisation_prompt,
+    build_user_prompt,
+)
 
 MODEL = os.getenv("MODEL", "claude-sonnet-4-6")
 MAX_TOKENS = int(os.getenv("MAX_TOKENS", "2048"))
@@ -23,13 +44,21 @@ DIMENSION_WEIGHTS = {
     "Brevity": 0.05,
 }
 
+# Industry baseline scores by platform (used for trend benchmarking)
+_PLATFORM_BASELINES: dict[str, dict[str, int]] = {
+    "google_search": {"Clarity": 6, "CTA Strength": 6, "Brevity": 7, "Platform Fit": 6, "Audience Fit": 6, "Value Proposition": 6, "Emotional Hook": 5, "Credibility": 6},
+    "facebook": {"Emotional Hook": 7, "Clarity": 5, "CTA Strength": 6, "Brevity": 6, "Audience Fit": 6, "Value Proposition": 6, "Platform Fit": 6, "Credibility": 5},
+    "linkedin": {"Audience Fit": 6, "Credibility": 7, "Value Proposition": 7, "Clarity": 6, "CTA Strength": 5, "Brevity": 5, "Emotional Hook": 5, "Platform Fit": 6},
+    "instagram": {"Emotional Hook": 7, "Brevity": 7, "Platform Fit": 7, "Clarity": 5, "CTA Strength": 6, "Audience Fit": 6, "Value Proposition": 5, "Credibility": 5},
+}
+_DEFAULT_BASELINE: dict[str, int] = {"Clarity": 6, "Audience Fit": 6, "CTA Strength": 5, "Value Proposition": 6, "Emotional Hook": 6, "Platform Fit": 6, "Credibility": 5, "Brevity": 6}
+
 
 def _get_client() -> anthropic.Anthropic:
     return anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
 
-def _call_api(client: anthropic.Anthropic, messages: list[dict]) -> str:
-    """Call the Anthropic API with exponential backoff on rate limits."""
+def _call_api(client: anthropic.Anthropic, messages: list[dict], system: str = SYSTEM_PROMPT) -> str:
     max_retries = 3
     base_delay = 1.0
 
@@ -38,7 +67,7 @@ def _call_api(client: anthropic.Anthropic, messages: list[dict]) -> str:
             response = client.messages.create(
                 model=MODEL,
                 max_tokens=MAX_TOKENS,
-                system=SYSTEM_PROMPT,
+                system=system,
                 messages=messages,
             )
             return response.content[0].text
@@ -52,12 +81,10 @@ def _call_api(client: anthropic.Anthropic, messages: list[dict]) -> str:
 
 
 def _parse_critique(raw: str, ad_input: AdCopyInput, client: anthropic.Anthropic) -> AdCritique:
-    """Parse JSON response, retrying once with schema correction on failure."""
     try:
         data = json.loads(raw)
         return AdCritique(**data)
     except (json.JSONDecodeError, Exception):
-        # Retry once with schema correction prompt
         user_prompt = build_user_prompt(ad_input.model_dump())
         correction_messages = [
             {"role": "user", "content": user_prompt},
@@ -69,8 +96,35 @@ def _parse_critique(raw: str, ad_input: AdCopyInput, client: anthropic.Anthropic
         return AdCritique(**data)
 
 
+def _format_slack_summary(critique: AdCritique, headline: str) -> str:
+    verdict_emoji = {
+        "strong": ":white_check_mark:",
+        "needs_work": ":warning:",
+        "weak": ":x:",
+        "do_not_run": ":no_entry:",
+    }
+    emoji = verdict_emoji.get(critique.overall_verdict, ":information_source:")
+    verdict_display = critique.overall_verdict.upper().replace("_", " ")
+    top_issue = (
+        critique.critical_issues[0] if critique.critical_issues
+        else critique.minor_issues[0] if critique.minor_issues
+        else "None"
+    )
+    top_strength = critique.strengths[0] if critique.strengths else "—"
+    best_variant = critique.variants[0] if critique.variants else None
+
+    lines = [
+        f"{emoji} *[{verdict_display}] {critique.overall_score}/100 — {headline[:60]}*",
+        f"> {critique.executive_summary}",
+        f":warning: Top issue: {top_issue}",
+        f":white_check_mark: Top strength: {top_strength}",
+    ]
+    if best_variant:
+        lines.append(f':bulb: Best variant: "{best_variant.headline}" — {best_variant.rationale}')
+    return "\n".join(lines)
+
+
 def critique_ad(ad_input: AdCopyInput) -> AdCritique:
-    """Run a single ad critique."""
     if not ad_input.headline.strip():
         raise ValueError("Headline cannot be empty. Please provide a headline to critique.")
 
@@ -81,19 +135,16 @@ def critique_ad(ad_input: AdCopyInput) -> AdCritique:
     raw = _call_api(client, messages)
     critique = _parse_critique(raw, ad_input, client)
 
-    # Enforce business rules
     if critique.overall_score < 25 and critique.overall_verdict != "do_not_run":
         critique.overall_verdict = "do_not_run"
     if critique.overall_score >= 25 and critique.overall_verdict == "do_not_run":
         critique.overall_verdict = "weak"
 
-    # Ensure 2-3 variants
     if len(critique.variants) < 2 or len(critique.variants) > 3:
         raise ValueError(
             f"Expected 2-3 variants, got {len(critique.variants)}. Please retry."
         )
 
-    # Flag character limit violations
     if ad_input.character_limits:
         for field, limit in ad_input.character_limits.items():
             value = getattr(ad_input, field, None)
@@ -105,16 +156,16 @@ def critique_ad(ad_input: AdCopyInput) -> AdCritique:
                 if violation_msg not in critique.critical_issues:
                     critique.critical_issues.insert(0, violation_msg)
 
+    critique.slack_summary = _format_slack_summary(critique, ad_input.headline)
+
     return critique
 
 
 def critique_batch(ads: list[AdCopyInput]) -> BatchCritique:
-    """Critique multiple ads and produce a fleet summary."""
     critiques = [critique_ad(ad) for ad in ads]
 
     avg_score = sum(c.overall_score for c in critiques) / len(critiques)
 
-    # Find weakest dimension across all ads
     dim_totals: dict[str, list[int]] = {}
     for critique in critiques:
         for dim in critique.dimensions:
@@ -137,4 +188,102 @@ def critique_batch(ads: list[AdCopyInput]) -> BatchCritique:
         fleet_summary=fleet_summary,
         average_score=round(avg_score, 1),
         weakest_dimension=weakest_dim,
+    )
+
+
+def compare_competitors(
+    your_ad: AdCopyInput,
+    competitors: list[CompetitorAd],
+    your_critique: AdCritique,
+) -> CompetitorAnalysis:
+    if not competitors or len(competitors) > 4:
+        raise ValueError("Provide 1-4 competitor ads.")
+
+    client = _get_client()
+    dim_scores = {d.dimension: d.score for d in your_critique.dimensions}
+    prompt = build_competitor_prompt(
+        your_ad.model_dump(),
+        [c.model_dump() for c in competitors],
+        dim_scores,
+    )
+    messages = [{"role": "user", "content": prompt}]
+    raw = _call_api(client, messages, system=COMPETITOR_SYSTEM_PROMPT)
+    data = json.loads(raw)
+    return CompetitorAnalysis(**data)
+
+
+def check_brand_voice(
+    ad_input: AdCopyInput,
+    voice_profile: BrandVoiceProfile,
+) -> BrandVoiceResult:
+    # Rule-based: prohibited word scan
+    rule_violations: list[VoiceViolation] = []
+    fields = {
+        "headline": ad_input.headline,
+        "body": ad_input.body,
+        "cta": ad_input.cta,
+        "tagline": ad_input.tagline,
+    }
+    for field_name, text in fields.items():
+        if not text:
+            continue
+        for word in voice_profile.prohibited_words:
+            if word.lower() in text.lower():
+                rule_violations.append(VoiceViolation(
+                    field=field_name,  # type: ignore[arg-type]
+                    text=text,
+                    rule=f'Prohibited word: "{word}"',
+                    severity="critical",
+                ))
+
+    # LLM call for tone/persona compliance
+    client = _get_client()
+    prompt = build_brand_voice_prompt(ad_input.model_dump(), voice_profile.model_dump())
+    messages = [{"role": "user", "content": prompt}]
+    raw = _call_api(client, messages, system=BRAND_VOICE_SYSTEM_PROMPT)
+    data = json.loads(raw)
+    result = BrandVoiceResult(**data)
+
+    # Merge: prepend rule-based violations
+    result.violations = rule_violations + result.violations
+    if rule_violations:
+        result.compliant = False
+        result.compliance_score = min(result.compliance_score, 50)
+
+    return result
+
+
+def check_localisation(ad_input: AdCopyInput, target_locale: str) -> LocalisationResult:
+    client = _get_client()
+    prompt = build_localisation_prompt(ad_input.model_dump(), target_locale)
+    messages = [{"role": "user", "content": prompt}]
+    raw = _call_api(client, messages, system=LOCALISATION_SYSTEM_PROMPT)
+    data = json.loads(raw)
+    return LocalisationResult(**data)
+
+
+def benchmark_against_trends(
+    critique: AdCritique,
+    platform: str,
+    product_category: str,
+) -> TrendBenchmark:
+    baselines = {**_DEFAULT_BASELINE, **_PLATFORM_BASELINES.get(platform, {})}
+    dim_scores = {d.dimension: d.score for d in critique.dimensions}
+
+    above = [d for d, score in dim_scores.items() if score > baselines.get(d, 6)]
+    below = [d for d, score in dim_scores.items() if score < baselines.get(d, 6)]
+
+    percentile = min(99, max(1, (critique.overall_score - 30) * 2))
+
+    return TrendBenchmark(
+        platform=platform,
+        product_category=product_category,
+        above_average_dimensions=above,
+        below_average_dimensions=below,
+        percentile_estimate=percentile,
+        benchmark_note=(
+            f"vs. {platform} industry baseline: {len(above)} dimensions above average, "
+            f"{len(below)} below. Overall score of {critique.overall_score} is approximately "
+            f"the {percentile}th percentile."
+        ),
     )

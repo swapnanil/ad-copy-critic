@@ -1,5 +1,9 @@
-# Spec
+# Spec docs (internal)
 spec-ad-copy-critic.md
+spec-ad-copy-critic-v2.md
+
+# Feedback store
+feedback_store.json
 
 # Python
 __pycache__/
